@@ -185,13 +185,13 @@ function getSelectedValues() {
   return selection.getActiveRange().getValues();
 }
 
-function onOpen() {
-  createMenu();
-}
-
 function createMenu() {
   SpreadsheetApp.getUi()
-    .createMenu("ParentSquare Import")
+    .createMenu("ParentSquare")
     .addItem("Convert selected rows", "main")
     .addToUi();
+}
+
+function onOpen() {
+  createMenu();
 }
