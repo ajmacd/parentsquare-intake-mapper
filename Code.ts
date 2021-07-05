@@ -1,5 +1,4 @@
 const enum Grade {
-  INCOMING = "Incoming",
   KINDERGARTEN = "Kindergarten",
   FIRST = "1st Grade",
   SECOND = "2nd Grade",
@@ -8,13 +7,6 @@ const enum Grade {
   FIFTH = "5th Grade",
   ALUMNI = "Alumni",
 }
-
-type Parent = {
-  name: string;
-  address: string;
-  phone: string;
-  email: string;
-};
 
 type IntakeRow = {
   program: string;
@@ -60,13 +52,17 @@ const exportHeaderRow: { [column in ExportColumn]: string } = {
   parentLanguage: "Parent Language",
 };
 
-function main() {
+function convertSelectedRowsAsIncoming() {
+  convertSelectedRows(true);
+}
+
+function convertSelectedRows(asIncoming: boolean = false) {
   // We assume the user has actually selected entire rows on the correct sheet
   // here. If not, terrible things will happen.
   const intakeRows = getSelectedIntakeRows();
 
   // Convert the data to our export format.
-  const exportRows = convertIntakeRows(intakeRows);
+  const exportRows = convertIntakeRows(intakeRows, asIncoming);
 
   // Prefix with the header row and convert to 2D array.
   const exportValues = exportRowsTo2D([exportHeaderRow, ...exportRows]);
@@ -113,7 +109,10 @@ function exportRowsTo2D(rows: { [column in ExportColumn]: any }[]): any[][] {
   ]);
 }
 
-function convertIntakeRows(intakeRows: IntakeRow[]): ExportRow[] {
+function convertIntakeRows(
+  intakeRows: IntakeRow[],
+  asIncoming: boolean
+): ExportRow[] {
   // Exclude anyone indicating they don't want to be added to ParentSquare.
   const includedRows = intakeRows.filter((row) =>
     row.inclusion.includes("YES")
@@ -123,7 +122,7 @@ function convertIntakeRows(intakeRows: IntakeRow[]): ExportRow[] {
   // wants to see them in separate rows (with the student duplicated).
   const parent1Rows = includedRows.map((row) => ({
     studentId: "",
-    gradeId: getGradeId(row),
+    gradeId: getGradeId(row, asIncoming),
     studentFirstName: row.studentFirstName,
     studentLastName: row.studentLastName,
     parentFirstName: getParentFirstName(row.parent1Name),
@@ -139,7 +138,7 @@ function convertIntakeRows(intakeRows: IntakeRow[]): ExportRow[] {
     .filter((row) => row.parent2Name.length > 0)
     .map((row) => ({
       studentId: "",
-      gradeId: getGradeId(row),
+      gradeId: getGradeId(row, asIncoming),
       studentFirstName: row.studentFirstName,
       studentLastName: row.studentLastName,
       parentFirstName: getParentFirstName(row.parent2Name),
@@ -154,7 +153,6 @@ function convertIntakeRows(intakeRows: IntakeRow[]): ExportRow[] {
 }
 
 const intakeGradeMap: { [grade in Grade]: number } = {
-  Incoming: -1,
   Kindergarten: 0,
   "1st Grade": 1,
   "2nd Grade": 2,
@@ -164,9 +162,9 @@ const intakeGradeMap: { [grade in Grade]: number } = {
   Alumni: 6,
 };
 
-function getGradeId(intakeRow: IntakeRow): number {
+function getGradeId(intakeRow: IntakeRow, asIncoming: boolean): number {
   const programModifier = intakeRow.program.includes("JBBP") ? 0 : 8;
-  const gradeModifier = intakeGradeMap[intakeRow.grade];
+  const gradeModifier = asIncoming ? -1 : intakeGradeMap[intakeRow.grade];
 
   return programModifier + gradeModifier;
 }
@@ -188,7 +186,11 @@ function getSelectedValues() {
 function createMenu() {
   SpreadsheetApp.getUi()
     .createMenu("ParentSquare")
-    .addItem("Convert selected rows", "main")
+    .addItem("Convert selected rows", "convertSelectedRows")
+    .addItem(
+      "Convert selected rows as incoming",
+      "convertSelectedRowsAsIncoming"
+    )
     .addToUi();
 }
 
